@@ -1,0 +1,4 @@
+*.json
+!manifest.json
+*.xlsx
+privado/
