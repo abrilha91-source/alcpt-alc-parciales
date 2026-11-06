@@ -1,6 +1,11 @@
-# ALCPT y ALC por parciales (v2.0)
-PWA para la Mesa de Inglés de la Esc. Mil. Enfría. Evalúa el ALCPT por forma, por semestre y por parcial, y el ALC por semestre y parcial (Parcial 1 = primer libro, Parcial 2 = segundo libro, Parcial 3 = integrador), en modo práctica o examen, con calificación 0–10 y registro de resultados.
+# ALCPT y ALC por parciales (v2.1)
+PWA para la Mesa de Inglés de la Esc. Mil. Enfría.
 
-Se publica **vacía**: el banco de reactivos es confidencial y se importa en cada dispositivo (archivo JSON); se guarda en IndexedDB y no sale del dispositivo. Este repositorio no contiene reactivos.
+- **ALC**: quices por parcial (cada parcial = un libro), semestral/anual, por libro (Books 3–18) y por lección.
+- **ALCPT**: por semestre, por parcial (con opción acumulativa) y por forma.
+- **Final**: aplica formas originales del ALCPT importadas aparte, con clave capturable y tablas de conversión de puntos a calificación.
+- Tres esquemas: programas de estudio 2026-2027, oficio de la Escuela (30 Sep 2026) y lineamiento de la superioridad (3 libros por año).
+
+Se publica **vacía**: el banco y las formas originales son confidenciales y se importan en cada dispositivo (archivos JSON). Se guardan en IndexedDB y no salen del dispositivo. Este repositorio no contiene reactivos.
 
 No afiliada al DLIELC.
