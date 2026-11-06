@@ -1,5 +1,5 @@
-# ALCPT y ALC por parciales (v2.4)
-PWA para la Mesa de Inglés de la Esc. Mil. Enfría.
+# ALCPT y ALC por parciales (v2.6)
+PWA para practicar y evaluar inglés (ALC y ALCPT).
 
 - **ALC · Evaluación Parcial 1 y 2** (cada parcial = un libro), además de evaluación semestral, por libro (Books 3–18) y por lección.
 - **ALCPT**: por semestre, por parcial (con opción acumulativa) y por forma.
@@ -16,3 +16,8 @@ No afiliada al DLIELC.
 - **Hoja de respuestas** A–D por reactivo; **clave opcional** (texto o CSV `n,clave`). Sin clave, las hojas quedan pendientes y se califican al capturarla. Calificación con las tablas de conversión.
 - Se conserva la carga de formas como datos (JSON/CSV).
 - Visor: pdf.js 4.10.38 (Mozilla, Apache-2.0) en `pdfjs/`.
+
+## v2.6 · Nuevo diseño
+- Diseño moderno (degradados, tarjetas, animaciones y transiciones, barras de progreso, festejo al acertar y al aprobar), pensado primero para celular, con modo claro/oscuro.
+- Primera vez: pantalla de bienvenida para importar el banco (tocar o arrastrar el .json).
+- Se conservan todas las secciones, funciones y datos guardados (mismas claves de IndexedDB y localStorage).
