@@ -28,3 +28,15 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}th,td{border-bottom:1
 .okt{color:#1d6b42;font-weight:700}.badt{color:#b3261e;font-weight:700}
 #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#17211d;color:#fff;padding:10px 16px;border-radius:12px;opacity:0;transition:.3s;pointer-events:none}#toast.on{opacity:1}
 @media print{header,.noprint{display:none}}
+.pdfbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0}
+.pdfv{max-height:72vh;overflow:auto;background:#eef1ef;border:1px solid var(--b);border-radius:12px;padding:2px;-webkit-overflow-scrolling:touch}
+.pdfv canvas{display:block;margin:0 auto 6px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.pdfd summary{cursor:pointer;padding:6px 0}
+textarea{border:1px solid var(--b);border-radius:10px;padding:10px;box-sizing:border-box}
+.hoja{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 14px;margin:8px 0}
+.hsec{grid-column:1/-1;font-weight:700;color:var(--v);margin-top:8px}
+.hr{display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid var(--b)}
+.hr>b{width:2.4em;text-align:right;margin-right:4px}
+.hr button{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--b);background:#fff;font:700 .95rem 'Noto Sans';cursor:pointer;padding:0}
+.hr button.sel{background:var(--v);color:#fff;border-color:var(--v)}.hr button.ok{background:#2e7d5b;color:#fff;border-color:#2e7d5b}.hr button.no{background:#b3261e;color:#fff;border-color:#b3261e}
+.hr button.pa{border-radius:10px;width:34px;background:var(--cl);color:var(--v)}

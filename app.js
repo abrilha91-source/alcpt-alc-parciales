@@ -1,12 +1,13 @@
 'use strict';
-/* ALCPT y ALC por parciales · v2.3 · Esc. Mil. Enfría.
+/* ALCPT y ALC por parciales · v2.4 · Esc. Mil. Enfría.
    La app se publica VACÍA. Se importan en cada dispositivo (IndexedDB):
-   1) banco_alcpt_alc_privado.json  2) formas del Final (JSON/CSV) y sus audios, que se cargan cuando estén disponibles. */
-const VER='2.3';
+   1) banco_alcpt_alc_privado.json  2) formas del Final (PDF original o JSON/CSV) y sus audios (MP3/M4A), que se cargan cuando estén disponibles. */
+const VER='2.4';
 const $=s=>document.querySelector(s),V=$('#v');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2400)};
-const hoy=()=>new Date().toISOString().slice(0,10);
+const fechaL=d=>{const x=new Date(d);return isNaN(x)?String(d).slice(0,10):`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`};
+const hoy=()=>fechaL(new Date());
 const L='ABCD';
 const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},SS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 /* ---------- almacenamiento ---------- */
@@ -134,23 +135,30 @@ let FF={forma:'',parte:'',modo:'examen',tabla:''};
 function vFinal(){const conv=BANK&&BANK.conversion||{};
  if(!FORMAS.some(f=>f.id===FF.forma))FF.forma=(FORMAS[0]||{}).id||'';const fm=FORMAS.find(f=>f.id===FF.forma);
  const sel=fm?fm.items.filter(i=>!FF.parte||i.sec===FF.parte):[];const conK=sel.filter(i=>i.k!=null).length;const aud=fm&&fm.aud||{};
+ const esPDF=fm&&fm.tipo==='pdf',conKF=fm?fm.items.filter(i=>i.k!=null).length:0,hp=fm?HOJAS().filter(h=>h.fid===fm.id):[];
  const nL=sel.filter(i=>i.sec==='L').length,conA=sel.filter(i=>i.sec==='L'&&aud[i.n]).length;
- V.innerHTML=`<div class="card"><h1>Examen final ALCPT</h1><p class="muted">Carga aquí las formas del ALCPT para el examen final o el extraordinario, con su clave y sus audios. Todo se guarda <b>solo en este dispositivo</b>; nada se publica.</p>
- <label class="btn">Cargar forma (JSON o CSV)<input type="file" id="impf" accept=".json,.csv,application/json,text/csv" multiple hidden></label><button class="btn sec" id="plant">Descargar plantilla CSV</button>
+ V.innerHTML=`<div class="card"><h1>Examen final ALCPT</h1><p class="muted">Agrega aquí las formas originales del ALCPT (PDF) y sus audios (MP3) para el examen final o el extraordinario. La clave es opcional. Todo se guarda <b>solo en este dispositivo</b>; nada se publica.</p>
+ <h2>Agregar forma original (PDF)</h2><p class="mini">El PDF de la forma se guarda en este dispositivo y se ve dentro de la app. Después adjunta el audio MP3 y, si la tienes, captura la clave.</p>
+ <div class="row"><div><label class="f">Nombre de la forma</label><input type="text" id="ptit" placeholder="p. ej. ALCPT Forma 125"></div><div><label class="f">Reactivos</label><input type="number" id="pn" value="100" min="1" max="300"></div><div><label class="f">De ellos, comprensión auditiva</label><input type="number" id="pnl" value="50" min="0" max="300"></div></div>
+ <label class="btn">Elegir PDF de la forma<input type="file" id="ppdf" accept="application/pdf,.pdf" hidden></label><span class="mini" id="ppdfn"></span> <button class="btn" id="pgua">Guardar forma PDF</button>
+ <h2>O cargar forma como datos (opcional)</h2><label class="btn sec">Cargar forma (JSON o CSV)<input type="file" id="impf" accept=".json,.csv,application/json,text/csv" multiple hidden></label><button class="btn sec" id="plant">Descargar plantilla CSV</button>
  <p class="mini">CSV: <code>forma,titulo,n,seccion,guion,pregunta,a,b,c,d,clave</code> · sección L (auditiva) o R (lectura) · clave A–D. Un archivo puede traer varias formas.</p>
- ${FORMAS.length?`<div class="tw"><table><tr><th>Forma</th><th>Reactivos</th><th>Auditiva / Lectura</th><th>Con clave</th><th>Audios</th></tr>${FORMAS.map(f=>{const a=f.aud||{};const L1=f.items.filter(i=>i.sec==='L');return `<tr><td>${esc(f.titulo)}</td><td>${f.items.length}</td><td>${L1.length} / ${f.items.length-L1.length}</td><td>${f.items.filter(i=>i.k!=null).length}</td><td>${a.forma?'pista completa':''}${a.forma&&Object.keys(a).length>1?' + ':''}${Object.keys(a).filter(x=>x!=='forma').length?Object.keys(a).filter(x=>x!=='forma').length+' por reactivo':''}${!Object.keys(a).length?'—':''}</td></tr>`}).join('')}</table></div>`:'<p class="muted">Aún no hay formas cargadas.</p>'}</div>
+ ${FORMAS.length?`<div class="tw"><table><tr><th>Forma</th><th>Tipo</th><th>Reactivos</th><th>Auditiva / Lectura</th><th>Con clave</th><th>Audios</th></tr>${FORMAS.map(f=>{const a=f.aud||{};const L1=f.items.filter(i=>i.sec==='L');return `<tr><td>${esc(f.titulo)}</td><td>${f.tipo==='pdf'?'PDF':'datos'}</td><td>${f.items.length}</td><td>${L1.length} / ${f.items.length-L1.length}</td><td>${f.items.filter(i=>i.k!=null).length}</td><td>${a.forma?'pista completa':''}${a.forma&&Object.keys(a).length>1?' + ':''}${Object.keys(a).filter(x=>x!=='forma').length?Object.keys(a).filter(x=>x!=='forma').length+' por reactivo':''}${!Object.keys(a).length?'—':''}</td></tr>`}).join('')}</table></div>`:'<p class="muted">Aún no hay formas cargadas.</p>'}</div>
  ${fm?`<div class="card"><h2>Aplicar</h2><label class="f">Forma</label><select id="forma">${FORMAS.map(f=>`<option value="${esc(f.id)}" ${f.id===FF.forma?'selected':''}>${esc(f.titulo)}</option>`).join('')}</select>
  <label class="f">Parte</label>${seg('parte',[['','Completa'],['L','Solo comprensión auditiva'],['R','Solo lectura']],FF.parte)}
  <p class="muted">${sel.length} reactivos · <b>${conK}</b> con clave${sel.length-conK?` · <span class="badt">${sel.length-conK} sin clave (no cuentan)</span>`:''}${nL?` · auditiva: ${conA} con audio propio${aud.forma?', pista completa cargada':''}`:''}.</p>
  <label class="f">Tabla de conversión a calificación</label><select id="tabla"><option value="">Porcentaje (aciertos ÷ reactivos con clave × 10)</option>${Object.entries(conv).map(([k,t])=>`<option value="${k}" ${FF.tabla===k?'selected':''}>${esc(t.nombre)} · mínimo ${t.t[t.t.length-1][0]} pts</option>`).join('')}</select>
  <label class="f">Modo</label>${seg('modo',[['examen','Examen final / extraordinario'],['practica','Práctica']],FF.modo)}
  <label class="f">Nombre del cadete (opcional)</label><input type="text" id="nom" value="${esc(localStorage.getItem('alc_nom')||'')}">
- <button class="btn xl" id="go" ${conK?'':'disabled'}>Comenzar</button>${conK?'':'<p class="badt">La forma no tiene clave: vuelve a cargarla con la columna «clave».</p>'}</div>
- <div class="card"><h2>Audios de la forma</h2><p class="muted">mp3 o m4a. Puedes cargar una <b>pista completa</b> de la parte auditiva y/o un audio <b>por reactivo</b>. Si eliges varios archivos a la vez, se asignan por el último número del nombre (p. ej. <i>item_07.mp3</i> → reactivo 7). En examen cada audio por reactivo se escucha hasta 2 veces.</p>
+ ${esPDF?`<button class="btn xl" id="go">Comenzar con hoja de respuestas</button>${conK?'':'<p class="mini">Sin clave: las hojas se guardan pendientes y se califican al capturar la clave.</p>'}`:`<button class="btn xl" id="go" ${conK?'':'disabled'}>Comenzar</button>${conK?'':'<p class="badt">La forma no tiene clave: vuelve a cargarla con la columna «clave».</p>'}`}</div>
+ ${esPDF?`<div class="card"><h2>PDF de la forma</h2><p class="mini">${esc(fm.pdf||'')} · ${fm.items.length} reactivos (${fm.nL||0} auditiva)</p><button class="btn sec" id="verpdf">Ver PDF</button><label class="btn sec">Reemplazar PDF<input type="file" id="reppdf" accept="application/pdf,.pdf" hidden></label><div id="pdfbox"></div></div>
+ <div class="card"><h2>Clave (opcional)</h2><p class="mini">Escribe las letras en orden (<code>ABDC CABD…</code>; usa <code>-</code> si falta alguna) o con número (<code>1 A, 2 C…</code>). También puedes cargar un CSV con columnas <code>n,clave</code>.</p><textarea id="clv" rows="4" spellcheck="false" style="width:100%;font:1rem monospace">${conKF?claveTxt(fm):''}</textarea><div><button class="btn" id="gclv">Guardar clave</button><label class="btn sec">Clave desde CSV<input type="file" id="clvcsv" accept=".csv,text/csv,.txt" hidden></label>${conKF?'<button class="btn sec" id="bclv">Borrar clave</button>':''}</div><p class="mini">${conKF}/${fm.items.length} reactivos con clave.</p></div>`:''}
+ ${hp.length?`<div class="card"><h2>Hojas pendientes de calificar</h2><p class="mini">Se califican con la tabla de conversión elegida arriba.</p><div class="tw"><table><tr><th>Fecha</th><th>Cadete</th><th>Contestados</th><th></th></tr>${hp.map(h=>`<tr><td>${fechaL(h.fecha)}</td><td>${esc(h.nom||'—')}</td><td>${h.r.filter(x=>x!==null).length}/${h.r.length}</td><td><button class="btn sm" data-h="${h.id}" ${conKF?'':'disabled'}>Calificar</button><button class="btn sm sec" data-hq="${h.id}">Quitar</button></td></tr>`).join('')}</table></div></div>`:''}
+ <div class="card"><h2>Audios de la forma</h2><p class="muted">MP3 (o m4a). Puedes cargar una <b>pista completa</b> de la parte auditiva y/o un audio <b>por reactivo</b>. Si eliges varios archivos a la vez, se asignan por el último número del nombre (p. ej. <i>item_07.mp3</i> → reactivo 7). En examen cada audio por reactivo se escucha hasta 2 veces.</p>
  <label class="btn">Pista completa${aud.forma?' (reemplazar)':''}<input type="file" id="audf" accept="audio/*,.mp3,.m4a" hidden></label><label class="btn sec">Audios por reactivo<input type="file" id="audn" accept="audio/*,.mp3,.m4a" multiple hidden></label>${aud.forma?`<audio controls preload="none" id="pf" style="width:100%;margin-top:6px"></audio>`:''}
- <div class="tw"><table><tr><th>Reactivo</th><th>Pregunta</th><th>Audio</th><th></th></tr>${fm.items.filter(i=>i.sec==='L').map(i=>`<tr><td>${i.n}</td><td>${esc((i.q||i.s||'').slice(0,60))}</td><td>${aud[i.n]?esc(aud[i.n]):(i.s?'voz (guion)':'—')}</td><td><label class="btn sm sec">${aud[i.n]?'Cambiar':'Adjuntar'}<input type="file" class="audi" data-n="${i.n}" accept="audio/*,.mp3,.m4a" hidden></label>${aud[i.n]?`<button class="btn sm sec qa" data-n="${i.n}">Quitar</button>`:''}</td></tr>`).join('')||'<tr><td colspan="4">La forma no tiene reactivos de auditiva.</td></tr>'}</table></div></div>
- <div class="card noprint"><button class="btn sec" id="imprimir">Imprimir cuadernillo y clave</button><button class="btn peligro" id="qf">Quitar esta forma y sus audios</button></div>`:''}`;
- $('#impf').onchange=importarForma;
+ <div class="tw"><table><tr><th>Reactivo</th><th>Pregunta</th><th>Audio</th><th></th></tr>${fm.items.filter(i=>i.sec==='L').map(i=>`<tr><td>${i.n}</td><td>${esc((i.q||i.s||(esPDF?'(en el PDF)':'')).slice(0,60))}</td><td>${aud[i.n]?esc(aud[i.n]):(i.s?'voz (guion)':'—')}</td><td><label class="btn sm sec">${aud[i.n]?'Cambiar':'Adjuntar'}<input type="file" class="audi" data-n="${i.n}" accept="audio/*,.mp3,.m4a" hidden></label>${aud[i.n]?`<button class="btn sm sec qa" data-n="${i.n}">Quitar</button>`:''}</td></tr>`).join('')||'<tr><td colspan="4">La forma no tiene reactivos de auditiva.</td></tr>'}</table></div></div>
+ <div class="card noprint">${esPDF?'':'<button class="btn sec" id="imprimir">Imprimir cuadernillo y clave</button>'}<button class="btn peligro" id="qf">Quitar esta forma${esPDF?', su PDF':''} y sus audios</button></div>`:''}`;
+ $('#impf').onchange=importarForma;$('#ppdf').onchange=e=>{$('#ppdfn').textContent=(e.target.files[0]||{}).name||''};$('#pgua').onclick=guardarFormaPDF;
  $('#plant').onclick=()=>{const csv='\uFEFFforma,titulo,n,seccion,guion,pregunta,a,b,c,d,clave\r\nF1,Forma de ejemplo,1,L,"M: Where is the clinic?\\nW: Next to the main gate.",Where is the clinic?,Behind the gym,Next to the main gate,In the barracks,At the airport,B\r\nF1,Forma de ejemplo,2,R,,She ___ a nurse.,is,are,am,be,A\r\n';const l=document.createElement('a');l.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));l.download='plantilla_forma_alcpt.csv';l.click()};
  if(!fm)return;
  $('#forma').onchange=e=>{FF.forma=e.target.value;vFinal()};$('#tabla').onchange=e=>{FF.tabla=e.target.value};
@@ -160,13 +168,78 @@ function vFinal(){const conv=BANK&&BANK.conversion||{};
  $('#audn').onchange=async e=>{const fl=[...e.target.files];const nums=fm.items.filter(i=>i.sec==='L').map(i=>i.n);let ok=0,no=[];for(const f of fl){const n=nombreANum(f.name);if(n!=null&&nums.includes(n)){await adjuntarAudio(fm.id,n,f);ok++}else no.push(f.name)}toast(`Audios asignados: ${ok}`);if(no.length)alert('Sin reactivo de auditiva que coincida:\n'+no.join('\n'));vFinal()};
  V.querySelectorAll('input.audi').forEach(i=>i.onchange=async e=>{await adjuntarAudio(fm.id,+i.dataset.n,e.target.files[0]);toast('Audio guardado');vFinal()});
  V.querySelectorAll('.qa').forEach(b=>b.onclick=async()=>{await idbDel(fKey(fm.id,+b.dataset.n));delete fm.aud[b.dataset.n];await guardarFormas();vFinal()});
- $('#imprimir').onclick=()=>imprimirForma(fm);
- $('#qf').onclick=async()=>{if(!confirm('¿Quitar esta forma y sus audios de este dispositivo?'))return;for(const k of Object.keys(fm.aud||{}))await idbDel(fKey(fm.id,k==='forma'?null:k));FORMAS=FORMAS.filter(f=>f!==fm);await guardarFormas();vFinal()};
+ if($('#imprimir'))$('#imprimir').onclick=()=>imprimirForma(fm);
+ if(esPDF){$('#verpdf').onclick=()=>verPDF(fm.id,$('#pdfbox'));
+  $('#reppdf').onchange=async e=>{const f=e.target.files[0];if(!f)return;await idbSet(pKey(fm.id),{name:f.name,type:'application/pdf',blob:f});fm.pdf=f.name;await guardarFormas();toast('PDF reemplazado');vFinal()};
+  const setK=async k=>{fm.items.forEach((i,j)=>i.k=k[j]);await guardarFormas();toast(`Clave guardada: ${k.filter(x=>x!=null).length} reactivos`);vFinal()};
+  $('#gclv').onclick=()=>{const k=parseClave($('#clv').value,fm.items.length);if(!k.some(x=>x!=null)){alert('No se reconoció ninguna letra A–D.');return}setK(k)};
+  $('#clvcsv').onchange=async e=>{const f=e.target.files[0];if(!f)return;const rows=parseCSV(await f.text());const k=Array(fm.items.length).fill(null);rows.forEach(r=>{const n=parseInt(r[0]),c=String(r[r.length-1]||'').trim().toUpperCase()[0];if(n>=1&&n<=k.length&&L.includes(c||'#'))k[n-1]=L.indexOf(c)});if(!k.some(x=>x!=null)){alert('El CSV no trae columnas n,clave reconocibles.');return}setK(k)};
+  if($('#bclv'))$('#bclv').onclick=()=>{if(confirm('¿Borrar la clave de esta forma?'))setK(Array(fm.items.length).fill(null))}}
+ V.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>calificarHoja(HOJAS().find(h=>h.id===b.dataset.h)));
+ V.querySelectorAll('[data-hq]').forEach(b=>b.onclick=()=>{if(confirm('¿Quitar esta hoja pendiente?')){setHOJAS(HOJAS().filter(h=>h.id!==b.dataset.hq));vFinal()}});
+ $('#qf').onclick=async()=>{if(!confirm('¿Quitar esta forma y sus audios de este dispositivo?'))return;for(const k of Object.keys(fm.aud||{}))await idbDel(fKey(fm.id,k==='forma'?null:k));if(fm.tipo==='pdf')await idbDel(pKey(fm.id));FORMAS=FORMAS.filter(f=>f!==fm);await guardarFormas();vFinal()};
  $('#go').onclick=()=>{localStorage.setItem('alc_nom',$('#nom').value.trim());
+  if(esPDF){iniciarHoja(fm,$('#nom').value.trim());return}
   const its=sel.map(i=>Object.assign({},i,{id:'F'+fm.id+'-'+i.n,tipo:i.sec==='L'?'Comprensión auditiva':'Lectura y estructura',e:'',aud:!!aud[i.n]}));
   EX={fuente:'final',c:{forma:fm.id,fid:fm.id,titulo:fm.titulo,parte:FF.parte,tabla:FF.tabla,pista:!!aud.forma},modo:FF.modo,nom:$('#nom').value.trim(),its,i:0,r:its.map(()=>null),plays:its.map(()=>0),ini:Date.now()};location.hash='#examen'}}
 function imprimirForma(fm){const its=fm.items;const w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}
  w.document.write(`<html><head><meta charset="utf-8"><title>${esc(fm.titulo)}</title><style>body{font-family:'Noto Sans',sans-serif;font-size:12px;margin:18mm}h1{font-size:16px}h2{font-size:14px}.it{break-inside:avoid;margin:0 0 8px}.k{columns:5}</style></head><body><h1>${esc(fm.titulo)}</h1><p>Uso interno · confidencial</p>${['L','R'].filter(s=>its.some(i=>i.sec===s)).map(s=>`<h2>${s==='L'?'Parte I · Comprensión auditiva':'Parte II · Lectura y estructura'}</h2>`+its.filter(i=>i.sec===s).map(i=>`<div class="it"><b>${i.n}.</b> ${esc(i.q)}<br>${i.o.map((o,j)=>`${'abcd'[j]}) ${esc(o)}`).join('<br>')}</div>`).join('')).join('')}<div style="page-break-before:always"></div><h1>Clave · ${esc(fm.titulo)}</h1><div class="k">${its.map(i=>`<div>${i.n}. ${i.k!=null?L[i.k]:'—'}</div>`).join('')}</div>${its.some(i=>i.s)?`<div style="page-break-before:always"></div><h1>Guiones de auditiva</h1>${its.filter(i=>i.s).map(i=>`<div class="it"><b>${i.n}.</b> ${esc(i.s).replace(/\n/g,'<br>')}</div>`).join('')}`:''}</body></html>`);w.document.close();w.print()}
+/* ---------- formas originales en PDF + audio MP3 (v2.4) ---------- */
+const pKey=fid=>'pdf|'+fid;
+const HOJAS=()=>LS('alc_hojas',[]),setHOJAS=a=>SS('alc_hojas',a);
+function itemsPDF(n,nL,clave){return Array.from({length:n},(_,j)=>({n:j+1,sec:j<nL?'L':'R',s:'',q:'',o:['','','',''],k:clave&&clave[j]!=null?clave[j]:null}))}
+/* clave en texto: "ABCD…" o "1 A, 2 B …" o una letra por renglón */
+function parseClave(t,n){t=String(t||'').toUpperCase();const k=Array(n).fill(null);
+ if(/\d/.test(t)){const re=/(\d{1,3})\s*[\.\)\-:=]?\s*([A-D])/g;let m;while((m=re.exec(t))){const i=+m[1]-1;if(i>=0&&i<n)k[i]=L.indexOf(m[2])}}
+ else{const ls=t.replace(/[^A-D\-_?]/g,'');[...ls].slice(0,n).forEach((c,i)=>{k[i]=c in{A:1,B:1,C:1,D:1}?L.indexOf(c):null})}return k}
+const claveTxt=fm=>fm.items.map(i=>i.k==null?'-':L[i.k]).join('').replace(/(.{10})/g,'$1 ').trim();
+async function guardarFormaPDF(){const t=$('#ptit').value.trim(),n=Math.max(1,Math.min(300,+$('#pn').value||100)),nL=Math.max(0,Math.min(n,+$('#pnl').value||0)),f=$('#ppdf').files[0];
+ if(!f){alert('Elige el PDF de la forma.');return}if(!/pdf/i.test(f.type)&&!/\.pdf$/i.test(f.name)){alert('El archivo debe ser PDF.');return}
+ const id=(t||f.name.replace(/\.[^.]+$/,'')).replace(/[|]/g,'-').slice(0,60);const prev=FORMAS.find(x=>x.id===id);
+ if(prev&&!confirm(`Ya existe la forma «${id}». ¿Reemplazar su PDF y número de reactivos? (los audios se conservan)`))return;
+ try{await idbSet(pKey(id),{name:f.name,type:'application/pdf',blob:f})}catch(x){alert('No se pudo guardar el PDF en el dispositivo: '+x.message);return}
+ const clave=prev?prev.items.map(i=>i.k):null;const nf={id,titulo:t||('Forma '+id),tipo:'pdf',pdf:f.name,nL,items:itemsPDF(n,nL,clave),aud:prev?prev.aud:{},fecha:hoy()};
+ if(prev)FORMAS[FORMAS.indexOf(prev)]=nf;else FORMAS.push(nf);await guardarFormas();if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});FF.forma=id;toast('Forma PDF guardada');vFinal()}
+/* visor PDF dentro de la app (pdf.js local; si falla, visor del navegador) */
+let PDFJS=null;
+async function pdfjs(){if(PDFJS)return PDFJS;const m=await import('./pdfjs/pdf.min.mjs');m.GlobalWorkerOptions.workerSrc=new URL('pdfjs/pdf.worker.min.mjs',location.href).href;return PDFJS=m}
+async function verPDF(fid,box){box.innerHTML='<p class="muted">Abriendo PDF…</p>';const r=await idbGet(pKey(fid));if(!r){box.innerHTML='<p class="badt">No hay PDF guardado para esta forma.</p>';return}
+ let z=+(localStorage.getItem('alc_pdfz')||1);
+ box.innerHTML=`<div class="pdfbar"><button type="button" class="btn sm sec" data-z="-">−</button><span class="mini pz">${Math.round(z*100)}%</span><button type="button" class="btn sm sec" data-z="+">+</button><span class="mini pp"></span><a class="btn sm sec" target="_blank" id="pdfab">Abrir aparte</a></div><div class="pdfv"></div>`;
+ const u=URL.createObjectURL(r.blob);box.querySelector('#pdfab').href=u;const v=box.querySelector('.pdfv');
+ try{const P=await pdfjs();const doc=await P.getDocument({data:new Uint8Array(await r.blob.arrayBuffer()),standardFontDataUrl:new URL('pdfjs/standard_fonts/',location.href).href}).promise;
+  const draw=async()=>{v.innerHTML='';box.querySelector('.pz').textContent=Math.round(z*100)+'%';box.querySelector('.pp').textContent=` · ${doc.numPages} pág.`;const W=Math.max(280,v.clientWidth-4);
+   for(let p=1;p<=doc.numPages;p++){const pg=await doc.getPage(p);const vp0=pg.getViewport({scale:1});const sc=W/vp0.width*z,dpr=Math.min(2,window.devicePixelRatio||1);const vp=pg.getViewport({scale:sc*dpr});
+    const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;c.style.width=(vp.width/dpr)+'px';c.dataset.p=p;v.appendChild(c);await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;if(!document.body.contains(v))return}};
+  box.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{z=Math.max(.5,Math.min(3,z+(b.dataset.z==='+'?.25:-.25)));localStorage.setItem('alc_pdfz',z);draw()});await draw();box.dataset.ok='1'}
+ catch(x){console.warn(x);v.innerHTML=`<iframe src="${u}" title="PDF" style="width:100%;height:70vh;border:0"></iframe><p class="mini">Visor del navegador (pdf.js no disponible: ${esc(x.message)}).</p>`}}
+/* hoja de respuestas */
+function iniciarHoja(fm,nom){const its=fm.items.filter(i=>!FF.parte||i.sec===FF.parte).map(i=>Object.assign({},i,{id:'F'+fm.id+'-'+i.n,tipo:i.sec==='L'?'Comprensión auditiva':'Lectura y estructura',e:'',q:`Reactivo ${i.n} (ver PDF)`}));
+ EX={fuente:'final',hoja:true,c:{forma:fm.id,fid:fm.id,titulo:fm.titulo,parte:FF.parte,tabla:FF.tabla,pista:!!(fm.aud||{}).forma,pdf:true},modo:FF.modo,nom,its,i:0,r:its.map(()=>null),plays:its.map(()=>0),ini:Date.now()};location.hash='#examen'}
+function vHoja(){const e=EX,fm=FORMAS.find(f=>f.id===e.c.fid)||{aud:{}},aud=fm.aud||{},prac=e.modo==='practica';const nr=e.r.filter(x=>x!==null).length;
+ V.innerHTML=`<div class="card"><div class="hud"><span>${titulo(e)}</span><span id="cnt">${nr}/${e.its.length} contestados</span></div>${e.nom?`<p class="mini">${esc(e.nom)}</p>`:''}
+ ${aud.forma?`<h3>Audio de la forma</h3><audio controls preload="auto" id="pista" style="width:100%"></audio>`:''}
+ <details class="pdfd" open><summary><b>Forma (PDF)</b></summary><div id="pdfbox"></div></details></div>
+ <div class="card"><h2>Hoja de respuestas</h2><p class="mini">Toca la letra de cada reactivo. ${prac?'En práctica ves si acertaste al momento.':'Al terminar, entrega la hoja.'}</p><div class="hoja">${e.its.map((it,j)=>`${j===0||e.its[j-1].sec!==it.sec?`<div class="hsec">${it.sec==='L'?'Parte I · Comprensión auditiva':'Parte II · Lectura y estructura'}</div>`:''}<div class="hr" data-j="${j}"><b>${it.n}</b>${L.split('').map((c,x)=>`<button type="button" data-x="${x}" class="${e.r[j]===x?'sel':''}${prac&&e.r[j]!==null&&it.k!=null?(x===it.k?' ok':(e.r[j]===x?' no':'')):''}">${c}</button>`).join('')}${it.sec==='L'&&aud[it.n]?`<button type="button" class="pa" data-n="${it.n}" title="Audio">▶</button>`:''}</div>`).join('')}</div>
+ <button class="btn xl" id="ent">Entregar hoja</button></div>`;
+ if(aud.forma)audioURL(e.c.fid,null).then(u=>{const p=$('#pista');if(p&&u){p.src=u;PISTA={el:p}}});
+ verPDF(e.c.fid,$('#pdfbox'));
+ V.querySelectorAll('.hr').forEach(r=>r.onclick=ev=>{const b=ev.target.closest('button');if(!b)return;const j=+r.dataset.j;
+  if(b.classList.contains('pa')){if(!prac&&e.plays[j]>=2){toast('Este audio ya se escuchó 2 veces');return}e.plays[j]++;tocar(e.c.fid,+b.dataset.n);return}
+  const it=e.its[j];if(prac&&e.r[j]!==null&&it.k!=null)return;const x=+b.dataset.x;e.r[j]=e.r[j]===x&&!prac?null:x;
+  r.querySelectorAll('button[data-x]').forEach(y=>{const yx=+y.dataset.x;y.className=(e.r[j]===yx?'sel':'')+(prac&&e.r[j]!==null&&it.k!=null?(yx===it.k?' ok':(e.r[j]===yx?' no':'')):'')});
+  $('#cnt').textContent=`${e.r.filter(z=>z!==null).length}/${e.its.length} contestados`});
+ $('#ent').onclick=()=>{const sin=e.r.filter(x=>x===null).length;if(sin&&!confirm(`Hay ${sin} reactivos sin contestar. ¿Entregar de todos modos?`))return;entregarHoja()}}
+function entregarHoja(){const e=EX;const conK=e.its.filter(i=>i.k!=null).length;
+ if(conK){calificar();return}
+ const h={id:Date.now().toString(36),fecha:new Date().toISOString(),nom:e.nom,fid:e.c.fid,titulo:e.c.titulo,parte:e.c.parte,tabla:e.c.tabla,modo:e.modo,ns:e.its.map(i=>i.n),r:e.r,min:Math.round((Date.now()-e.ini)/60000)};
+ const a=HOJAS();a.push(h);setHOJAS(a);EX=null;if(AUD)AUD.pause();if(PISTA){PISTA.el.pause();PISTA=null}history.replaceState(null,'','#final/ok');nav();
+ V.innerHTML=`<div class="card"><h1>Hoja guardada</h1><p class="muted">${esc(h.titulo)}${h.nom?' · '+esc(h.nom):''} · ${h.r.filter(x=>x!==null).length}/${h.r.length} contestados.</p><p>La forma aún no tiene clave. La hoja queda <b>pendiente</b> en este dispositivo; cuando captures la clave en «Examen final» podrás calificarla con la tabla de conversión.</p><a class="btn" href="#final">Volver a Examen final</a></div>`}
+function calificarHoja(h){const fm=FORMAS.find(f=>f.id===h.fid);if(!fm){alert('La forma de esta hoja ya no está en el dispositivo.');return}
+ const its=h.ns.map(n=>fm.items.find(i=>i.n===n)).filter(Boolean).map(i=>Object.assign({},i,{id:'F'+fm.id+'-'+i.n,tipo:i.sec==='L'?'Comprensión auditiva':'Lectura y estructura',e:'',q:`Reactivo ${i.n} (ver PDF)`}));
+ if(!its.some(i=>i.k!=null)){alert('Primero captura la clave de la forma.');return}
+ EX={fuente:'final',hoja:true,c:{forma:fm.id,fid:fm.id,titulo:fm.titulo,parte:h.parte,tabla:FF.tabla||h.tabla,pdf:true},modo:h.modo,nom:h.nom,its,i:0,r:h.r,plays:[],ini:Date.parse(h.fecha)-h.min*60000};
+ setHOJAS(HOJAS().filter(x=>x.id!==h.id));calificar()}
 function convertir(pts,tabla){const t=BANK&&BANK.conversion&&BANK.conversion[tabla];if(!t)return null;for(const [p,c] of t.t)if(pts>=p)return c;return null}
 /* ---------- examen ---------- */
 let EX=null,PISTA=null,AUD=null;
@@ -177,7 +250,7 @@ function evalTxt(e){const c=e.c;if(e.fuente==='final')return `Final · ${c.titul
  if(c.forma)return `Forma ${c.forma}`;if(c.alcance==='libro')return `Book ${c.libro}${c.lec?' · L'+c.lec:''}`;
  return (c.par?`Parcial ${c.par}${c.acum?' acum.':''}`:(esqId()==='superioridad'?'Anual':'Semestral'))+(e.fuente==='alc'&&c.libros?` · Book ${c.libros.join(', ')}`:'')+(c.lec?' · L'+c.lec:'')}
 function titulo(e){return `${e.fuente==='alc'?'ALC':'ALCPT'} · `+(e.c.forma||e.fuente==='final'||e.c.alcance==='libro'?'':esc(e.c.cursoNom||'')+' · ')+evalTxt(e)}
-function vExamen(){if(!EX){location.hash='#inicio';return}const e=EX,it=e.its[e.i],ans=e.r[e.i],prac=e.modo==='practica',done=prac&&ans!==null&&it.k!=null;
+function vExamen(){if(!EX){location.hash='#inicio';return}if(EX.hoja){vHoja();return}const e=EX,it=e.its[e.i],ans=e.r[e.i],prac=e.modo==='practica',done=prac&&ans!==null&&it.k!=null;
  const parte=it.sec==='L'?'Parte I · Comprensión auditiva':'Parte II · Lectura y estructura';const ofi=it.sec==='L'&&!it.s&&!it.aud;
  V.innerHTML=`<div class="card"><div class="hud"><span>${titulo(e)}</span><span>${e.i+1} / ${e.its.length}</span></div><div class="pbar"><i style="width:${100*(e.i+1)/e.its.length}%"></i></div>
  <span class="tag">${parte}</span><span class="tag">${esc(it.tipo)}</span>${it.libro?`<span class="tag">Book ${it.libro}${it.leccion?' · L'+it.leccion:''}</span>`:''}${e.fuente==='final'?`<span class="tag">Reactivo ${it.n}${it.bis?' bis':''}</span>`:''}${it.k==null?'<span class="tag" style="background:#FBE3E0;color:#b3261e">sin clave</span>':''}
@@ -232,7 +305,7 @@ function vCalif(){if(!BANK){V.innerHTML=sinBanco();bindImp();return}const cfg=CF
  V.querySelectorAll('input[id],select#tb').forEach(i=>i.oninput=i.onchange=calc);
  V.querySelectorAll('[data-cfg]').forEach(i=>i.onchange=()=>{const o=LS('alc_cfg_'+esqId(),{});o[i.dataset.cfg]=parseFloat(i.value);SS('alc_cfg_'+esqId(),o);vCalif()});calc()}
 /* ---------- resultados ---------- */
-function tablaRes(a){const m=CFG().minima;return `<div class="tw"><table><tr><th>Fecha</th><th>Cadete</th><th>Prueba</th><th>Curso</th><th>Evaluación</th><th>Modo</th><th>Aciertos</th><th>%</th><th>Cal.</th></tr>${a.map(r=>`<tr><td>${r.fecha.slice(0,10)}</td><td>${esc(r.nom||'—')}</td><td>${r.fuente==='final'?'FINAL':r.fuente.toUpperCase()}</td><td>${esc(r.curso||r.sem||'—')}</td><td>${esc(r.eval)}</td><td>${r.modo==='examen'?'Examen':'Práctica'}</td><td>${r.ok}/${r.n}</td><td>${r.pct}</td><td class="${r.cal>=m?'okt':'badt'}">${r.cal.toFixed(1)}</td></tr>`).join('')}</table></div>`}
+function tablaRes(a){const m=CFG().minima;return `<div class="tw"><table><tr><th>Fecha</th><th>Cadete</th><th>Prueba</th><th>Curso</th><th>Evaluación</th><th>Modo</th><th>Aciertos</th><th>%</th><th>Cal.</th></tr>${a.map(r=>`<tr><td>${fechaL(r.fecha)}</td><td>${esc(r.nom||'—')}</td><td>${r.fuente==='final'?'FINAL':r.fuente.toUpperCase()}</td><td>${esc(r.curso||r.sem||'—')}</td><td>${esc(r.eval)}</td><td>${r.modo==='examen'?'Examen':'Práctica'}</td><td>${r.ok}/${r.n}</td><td>${r.pct}</td><td class="${r.cal>=m?'okt':'badt'}">${r.cal.toFixed(1)}</td></tr>`).join('')}</table></div>`}
 function vRes(){const a=RES().slice().reverse();
  V.innerHTML=`<div class="card"><h1>Resultados</h1><p class="muted">Guardados solo en este dispositivo.</p>${a.length?tablaRes(a):'<p>Aún no hay resultados.</p>'}
  <div class="row noprint"><button class="btn" id="csv" ${a.length?'':'disabled'}>Exportar CSV</button><button class="btn sec" onclick="print()">Imprimir</button><button class="btn peligro" id="del" ${a.length?'':'disabled'}>Borrar resultados</button></div></div>
