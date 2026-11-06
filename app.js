@@ -1,8 +1,8 @@
 'use strict';
-/* ALCPT y ALC por parciales · v2.2 · Esc. Mil. Enfría.
+/* ALCPT y ALC por parciales · v2.3 · Esc. Mil. Enfría.
    La app se publica VACÍA. Se importan en cada dispositivo (IndexedDB):
    1) banco_alcpt_alc_privado.json  2) formas del Final (JSON/CSV) y sus audios, que se cargan cuando estén disponibles. */
-const VER='2.2';
+const VER='2.3';
 const $=s=>document.querySelector(s),V=$('#v');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2400)};
@@ -26,7 +26,7 @@ const CFG=()=>Object.assign({},ESQ().pond,LS('alc_cfg_'+esqId(),{}));
 /* semestres ALCPT que corresponden a un curso del esquema */
 function semsDe(c){if(esqId()==='superioridad')return {A1:[1],A2:[2,3],A3:[4,5],A4:[6,7]}[c.id]||[c.n];return [c.n]}
 /* ---------- navegación ---------- */
-const TABS=[['inicio','Inicio'],['alc','ALC'],['alcpt','ALCPT'],['final','Final ALCPT'],['calif','Calificación'],['resultados','Resultados'],['banco','Banco']];
+const TABS=[['inicio','Inicio'],['alc','ALC · Parcial 1 y 2'],['alcpt','ALCPT'],['final','Examen final'],['calif','Calificación'],['resultados','Resultados'],['banco','Banco']];
 function nav(){const h=(location.hash||'#inicio').slice(1).split('/')[0];$('#nav').innerHTML=TABS.map(([k,t])=>`<a href="#${k}" class="${h===k?'on':''}">${t}</a>`).join('')}
 window.addEventListener('hashchange',render);
 function render(){nav();const h=(location.hash||'#inicio').slice(1).split('/')[0];
@@ -70,7 +70,7 @@ function bindEsq(fn){const s=$('#esq');if(s)s.onchange=()=>{SS('alc_esq',s.value
 function vInicio(){if(!BANK){V.innerHTML=sinBanco();bindImp();return}
  const r=RES().slice(-5).reverse(),E=ESQ();
  V.innerHTML=`<div class="card"><h1>ALCPT y ALC por parciales</h1><p class="muted">Banco v${esc(BANK.version)} · ${BANK.alc.length} reactivos ALC (Books ${Math.min(...BANK.alc.map(i=>i.libro))}–${Math.max(...BANK.alc.map(i=>i.libro))}) · ${BANK.alcpt.length} reactivos ALCPT${FORMAS.length?` · ${FORMAS.length} formas para el Final`:''}.</p>
- <a class="btn xl" href="#alc">ALC · quiz por parcial, libro o lección</a><a class="btn xl" href="#alcpt">ALCPT · por semestre, parcial o forma</a><a class="btn xl" href="#final">Final ALCPT · cargar formas y audios</a><a class="btn xl sec" href="#calif">Calcular calificación del parcial y final</a></div>
+ <div class="row"><a class="btn xl" href="#alc/p1">ALC · Evaluación Parcial 1</a><a class="btn xl" href="#alc/p2">ALC · Evaluación Parcial 2</a></div><a class="btn xl sec" href="#alc">ALC · semestral, por libro o por lección</a><a class="btn xl" href="#alcpt">ALCPT · por semestre, parcial o forma</a><a class="btn xl" href="#final">Examen final ALCPT · formas y audios originales</a><a class="btn xl sec" href="#calif">Calcular calificación del parcial y final</a></div>
  <div class="card"><h2>Cómo se organiza</h2>${selEsq()}<p class="muted">${E.parciales} parciales por ${esqId()==='superioridad'?'año':'semestre'}; cada parcial evalúa un libro del ALC. ${esqId()==='superioridad'?'Parciales 10 % c/u y final del semestre 70 %.':'Parcial = examen 60 % + portafolio 30 % + participación 10 %. Calificación final = parciales 60 % + ALCPT final 40 %.'}</p>${tablaCursos()}</div>
  <div class="card"><h2>Últimos resultados</h2>${r.length?tablaRes(r):'<p class="muted">Aún no hay resultados en este dispositivo.</p>'}</div>`;bindEsq(vInicio)}
 /* ---------- selección ALC / ALCPT ---------- */
@@ -83,7 +83,7 @@ function vSel(fuente){if(!BANK){V.innerHTML=sinBanco();bindImp();return}
  const alc=fuente==='alc'?[['parcial','Por parcial'],['semestral',esqId()==='superioridad'?'Anual (todos los libros)':'Semestral (ambos libros)'],['libro','Un libro']]:[['parcial','Por parcial'],['semestral',esqId()==='superioridad'?'Por año':'Semestral'],['forma','Por forma']];
  const cnt=pool(f).length;const allB=[...new Set(BANK.alc.map(i=>i.libro))].sort((a,b)=>a-b);
  const bs=fuente==='alc'?librosEval(f):[];
- V.innerHTML=`<div class="card"><h1>${fuente==='alc'?'ALC · quices por parcial':'ALCPT'}</h1>${selEsq()}
+ V.innerHTML=`<div class="card"><h1>${fuente==='alc'?'ALC · Evaluación Parcial 1 y 2':'ALCPT'}</h1>${selEsq()}
  <label class="f">Evaluar</label>${seg('alcance',alc,f.alcance)}
  ${f.alcance==='forma'?`<label class="f">Forma</label>${seg('forma',formas.map(x=>[x,x==='V'?'V (vocabulario ALC 19–30)':x]),f.forma)}<p class="mini">Formas A–H: 100 reactivos (50 auditiva + 50 lectura). Para el examen final con formas y audios cargados usa la pestaña «Final ALCPT».</p>`:
  f.alcance==='libro'&&fuente==='alc'?`<label class="f">Libro</label><select id="libro">${allB.map(b=>`<option value="${b}" ${b==f.libro?'selected':''}>Book ${b}</option>`).join('')}</select>`:
@@ -104,7 +104,8 @@ function vSel(fuente){if(!BANK){V.innerHTML=sinBanco();bindImp();return}
  const up=()=>{['curso','libro','sec','tipo','n'].forEach(k=>{const e=$('#'+k);if(e)f[k]=e.value});f.acum=$('#acum')?$('#acum').checked:false;f.comp=$('#comp')?$('#comp').checked:f.comp};
  ['#curso','#libro','#sec','#tipo','#acum','#comp'].forEach(s=>{const e=$(s);if(e)e.onchange=()=>{up();if(s==='#curso')f.lec='';vSel(fuente)}});
  $('#go').onclick=()=>{up();localStorage.setItem('alc_nom',$('#nom').value.trim());iniciar(fuente,f,$('#nom').value.trim())}}
-const vALCPT=()=>vSel('alcpt'),vALC=()=>vSel('alc');
+const vALCPT=()=>vSel('alcpt');
+function vALC(){const m=(location.hash.split('/')[1]||'').match(/^p([12])$/);if(m&&BANK){const f=filtros('alc');f.alcance='parcial';f.par=m[1];history.replaceState(null,'','#alc')}vSel('alc')}
 /* ---------- final: formas y audios que se cargan después ---------- */
 /* Formato JSON: {"tipo":"formas_alcpt","formas":[{"id":"F1","titulo":"…","items":[{"n":1,"sec":"L","s":"guion opcional","q":"pregunta","o":["a","b","c","d"],"k":"B"}]}]}
    Formato CSV (encabezado): forma,titulo,n,seccion,guion,pregunta,a,b,c,d,clave   (seccion = L o R; clave = A–D) */
@@ -134,7 +135,7 @@ function vFinal(){const conv=BANK&&BANK.conversion||{};
  if(!FORMAS.some(f=>f.id===FF.forma))FF.forma=(FORMAS[0]||{}).id||'';const fm=FORMAS.find(f=>f.id===FF.forma);
  const sel=fm?fm.items.filter(i=>!FF.parte||i.sec===FF.parte):[];const conK=sel.filter(i=>i.k!=null).length;const aud=fm&&fm.aud||{};
  const nL=sel.filter(i=>i.sec==='L').length,conA=sel.filter(i=>i.sec==='L'&&aud[i.n]).length;
- V.innerHTML=`<div class="card"><h1>Final · ALCPT</h1><p class="muted">Carga aquí las formas del ALCPT para el examen final o el extraordinario, con su clave y sus audios. Todo se guarda <b>solo en este dispositivo</b>; nada se publica.</p>
+ V.innerHTML=`<div class="card"><h1>Examen final ALCPT</h1><p class="muted">Carga aquí las formas del ALCPT para el examen final o el extraordinario, con su clave y sus audios. Todo se guarda <b>solo en este dispositivo</b>; nada se publica.</p>
  <label class="btn">Cargar forma (JSON o CSV)<input type="file" id="impf" accept=".json,.csv,application/json,text/csv" multiple hidden></label><button class="btn sec" id="plant">Descargar plantilla CSV</button>
  <p class="mini">CSV: <code>forma,titulo,n,seccion,guion,pregunta,a,b,c,d,clave</code> · sección L (auditiva) o R (lectura) · clave A–D. Un archivo puede traer varias formas.</p>
  ${FORMAS.length?`<div class="tw"><table><tr><th>Forma</th><th>Reactivos</th><th>Auditiva / Lectura</th><th>Con clave</th><th>Audios</th></tr>${FORMAS.map(f=>{const a=f.aud||{};const L1=f.items.filter(i=>i.sec==='L');return `<tr><td>${esc(f.titulo)}</td><td>${f.items.length}</td><td>${L1.length} / ${f.items.length-L1.length}</td><td>${f.items.filter(i=>i.k!=null).length}</td><td>${a.forma?'pista completa':''}${a.forma&&Object.keys(a).length>1?' + ':''}${Object.keys(a).filter(x=>x!=='forma').length?Object.keys(a).filter(x=>x!=='forma').length+' por reactivo':''}${!Object.keys(a).length?'—':''}</td></tr>`}).join('')}</table></div>`:'<p class="muted">Aún no hay formas cargadas.</p>'}</div>
